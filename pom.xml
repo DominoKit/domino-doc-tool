@@ -11,6 +11,56 @@
 
     <name>domino-doc-tool</name>
 
+    <description>Internal tool to generate dominokit website docs</description>
+    <url>https://github.com/DominoKit/domino-doc-tool</url>
+
+    <organization>
+        <name>Dominokit</name>
+        <url>https://github.com/DominoKit</url>
+    </organization>
+
+    <licenses>
+        <license>
+            <name>The Apache Software License, Version 2.0</name>
+            <url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
+        </license>
+    </licenses>
+
+    <developers>
+        <developer>
+            <name>Ahmad K. Bawaneh</name>
+            <email>akabme@gmail.com</email>
+        </developer>
+        <developer>
+            <name>Rafat J. Al-Barouki</name>
+            <email>rafat.albarouki@gmail.com</email>
+        </developer>
+    </developers>
+
+    <issueManagement>
+        <url>https://github.com/DominoKit/domino-doc-tool/issues</url>
+        <system>GitHub Issues</system>
+    </issueManagement>
+
+    <inceptionYear>2019</inceptionYear>
+
+    <scm>
+        <connection>scm:git:https://github.com/DominoKit/domino-doc-tool.git</connection>
+        <developerConnection>scm:git:git@github.com:DominoKit/domino-doc-tool.git</developerConnection>
+        <url>https://github.com/DominoKit/domino-doc-tool</url>
+    </scm>
+
+    <distributionManagement>
+        <snapshotRepository>
+            <id>ossrh</id>
+            <url>https://oss.sonatype.org/content/repositories/snapshots</url>
+        </snapshotRepository>
+        <repository>
+            <id>ossrh</id>
+            <url>https://oss.sonatype.org/service/local/staging/deploy/maven2/</url>
+        </repository>
+    </distributionManagement>
+
     <properties>
         <snapshot.version>HEAD-SNAPSHOT</snapshot.version>
         <next.release.version>1.0.0</next.release.version>
