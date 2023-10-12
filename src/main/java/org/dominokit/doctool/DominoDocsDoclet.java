@@ -15,9 +15,12 @@
  */
 package org.dominokit.doctool;
 
+import static java.util.Objects.isNull;
 import static java.util.Objects.nonNull;
 
 import com.sun.source.doctree.DocCommentTree;
+import com.sun.source.doctree.DocTree;
+import com.sun.source.doctree.HiddenTree;
 import com.sun.source.util.TreePath;
 import java.io.*;
 import java.nio.file.Files;
@@ -35,7 +38,7 @@ import jdk.javadoc.doclet.Doclet;
 import jdk.javadoc.doclet.DocletEnvironment;
 import jdk.javadoc.doclet.Reporter;
 
-public class DominoUiDoclet implements Doclet {
+public class DominoDocsDoclet implements Doclet {
   private Locale locale;
   private Reporter reporter;
   private DocletEnvironment env;
@@ -172,6 +175,7 @@ public class DominoUiDoclet implements Doclet {
                       rootElement.getEnclosedElements().stream()
                           .filter(element -> ElementKind.CONSTRUCTOR == element.getKind())
                           .filter(element -> element.getModifiers().contains(Modifier.PUBLIC))
+                          .filter(element -> !isHidden(element))
                           .map(this::asMemberSummary)
                           .map(Object::toString)
                           .collect(Collectors.joining("\n"));
@@ -183,6 +187,7 @@ public class DominoUiDoclet implements Doclet {
                               element ->
                                   element.getModifiers().contains(Modifier.PUBLIC)
                                       && element.getModifiers().contains(Modifier.STATIC))
+                          .filter(element -> !isHidden(element))
                           .map(this::asMemberSummary)
                           .map(Object::toString)
                           .collect(Collectors.joining("\n"));
@@ -194,6 +199,7 @@ public class DominoUiDoclet implements Doclet {
                               element ->
                                   element.getModifiers().contains(Modifier.PUBLIC)
                                       && !element.getModifiers().contains(Modifier.STATIC))
+                          .filter(element -> !isHidden(element))
                           .map(this::asMemberSummary)
                           .map(Object::toString)
                           .collect(Collectors.joining("\n"));
@@ -220,8 +226,9 @@ public class DominoUiDoclet implements Doclet {
                     members.append("<div class=\"dui dui-site-component-members\">");
                     members.append(noneStaticMethods);
                     members.append("</div>\n");
-                    members.append("</div>\n");
                   }
+
+                  members.append("</div>\n");
 
                   writeFile(rootElement, "-dui-site-class-docs.html", pkg, elementDocs);
                   writeFile(rootElement, "-dui-site-members-docs.html", pkg, members.toString());
@@ -240,6 +247,12 @@ public class DominoUiDoclet implements Doclet {
   }
 
   private MemberSummary asMemberSummary(Element element) {
+    String docs = getDocs(element);
+
+    if (isNull(docs) || docs.trim().isEmpty()) {
+      return new EmptyMemberSummary();
+    }
+
     String modifiers =
         element.getModifiers().stream().map(Modifier::toString).collect(Collectors.joining(" "));
 
@@ -253,7 +266,6 @@ public class DominoUiDoclet implements Doclet {
                             + " "
                             + variableElement.getSimpleName().toString())
                 .collect(Collectors.joining(", "));
-    String docs = getDocs(element);
 
     String name =
         ElementKind.CONSTRUCTOR == element.getKind()
@@ -329,6 +341,29 @@ public class DominoUiDoclet implements Doclet {
     }
   }
 
+  public boolean isHidden(Element element) {
+
+    TreePath path = env.getDocTrees().getPath(element);
+    if (nonNull(path)) {
+      DocCommentTree tree = env.getDocTrees().getDocCommentTree(path);
+      if (nonNull(tree)) {
+        Optional<DocCommentTree> docCommentTree =
+            Optional.ofNullable(path).map(treePath -> env.getDocTrees().getDocCommentTree(path));
+
+        return docCommentTree
+            .map(
+                docTree ->
+                    docTree.getBlockTags().stream()
+                        .anyMatch(
+                            tag ->
+                                tag.getKind().equals(DocTree.Kind.UNKNOWN_BLOCK_TAG)
+                                    && tag.accept(new DominoKitSiteExclusionTreeVisitor(), tag)))
+            .orElse(false);
+      }
+    }
+    return false;
+  }
+
   public String getDocs(Element element) {
 
     TreePath path = env.getDocTrees().getPath(element);
@@ -337,8 +372,18 @@ public class DominoUiDoclet implements Doclet {
       if (nonNull(tree)) {
         Optional<DocCommentTree> docCommentTree =
             Optional.ofNullable(path).map(treePath -> env.getDocTrees().getDocCommentTree(path));
+
         return docCommentTree
-            .map(doctree -> doctree.accept(new DuiSiteDocsTreeVisitor(this.env, docsUrl), element))
+            .filter(
+                docTree -> {
+                  return docTree.getBlockTags().stream()
+                      .noneMatch(tag -> tag instanceof HiddenTree);
+                })
+            .map(
+                doctree -> {
+                  return doctree.accept(
+                      new DominoKitSiteDocsTreeVisitor(this.env, docsUrl), element);
+                })
             .orElse("");
       }
     }
@@ -382,6 +427,18 @@ public class DominoUiDoclet implements Doclet {
       sb.append("</div>\n");
 
       return sb.toString();
+    }
+  }
+
+  private static class EmptyMemberSummary extends MemberSummary {
+
+    public EmptyMemberSummary() {
+      super("", "", "", "");
+    }
+
+    @Override
+    public String toString() {
+      return "";
     }
   }
 }

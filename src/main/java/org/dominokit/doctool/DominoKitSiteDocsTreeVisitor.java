@@ -26,12 +26,12 @@ import javax.lang.model.element.Element;
 import javax.lang.model.element.ElementKind;
 import jdk.javadoc.doclet.DocletEnvironment;
 
-public class DuiSiteDocsTreeVisitor extends SimpleDocTreeVisitor<String, Element> {
+public class DominoKitSiteDocsTreeVisitor extends SimpleDocTreeVisitor<String, Element> {
 
   private final DocletEnvironment docletEnv;
   private final String docsRootUrl;
 
-  public DuiSiteDocsTreeVisitor(DocletEnvironment docletEnv, String docsRootUrl) {
+  public DominoKitSiteDocsTreeVisitor(DocletEnvironment docletEnv, String docsRootUrl) {
     this.docletEnv = docletEnv;
     this.docsRootUrl = docsRootUrl;
   }
@@ -46,17 +46,21 @@ public class DuiSiteDocsTreeVisitor extends SimpleDocTreeVisitor<String, Element
     return getElementFromReference(node, element)
         .map(
             referencedElement -> {
-              if (ElementKind.METHOD == referencedElement.getKind()) {
-                return "";
-              } else {
-                String pkgPath =
-                    docletEnv
-                        .getElementUtils()
-                        .getPackageOf(referencedElement)
-                        .getQualifiedName()
-                        .toString()
-                        .replace(".", "/");
+              String pkgPath =
+                  docletEnv
+                      .getElementUtils()
+                      .getPackageOf(referencedElement)
+                      .getQualifiedName()
+                      .toString()
+                      .replace(".", "/");
 
+              if (ElementKind.METHOD == referencedElement.getKind()) {
+                return docsRootUrl
+                    + pkgPath
+                    + "/"
+                    + referencedElement.getEnclosingElement().getSimpleName().toString()
+                    + ".html";
+              } else {
                 return docsRootUrl
                     + pkgPath
                     + "/"
@@ -167,7 +171,10 @@ public class DuiSiteDocsTreeVisitor extends SimpleDocTreeVisitor<String, Element
 
   @Override
   public String visitReturn(ReturnTree node, Element element) {
-    return "";
+    return "</br></br><b>Returns: </b> "
+        + node.getDescription().stream()
+            .map(docTree -> docTree.accept(this, element))
+            .collect(Collectors.joining("\n", "<p>", "</p>"));
   }
 
   @Override
